@@ -1,13 +1,17 @@
 {
   "schema_version": 1,
-  "profile_revision": 1,
+  "profile_revision": 2,
   "name": "docker",
   "description": "Generic Docker host using container names as services",
   "journal": true,
   "required_paths": ["/var/lib/docker"],
   "files": [],
   "tasks": [],
-  "docker": {"enabled": true},
+  "docker": {
+    "enabled": true,
+    "mode": "api",
+    "polling_interval": 5
+  },
   "detect": {
     "mode": "any",
     "priority": 10,
@@ -18,8 +22,8 @@
   },
   "test_service": "docker-test",
   "notes": [
-    "Discovers every container using Docker's json-file logging driver and labels it by container name.",
-    "Re-run the installer after adding, removing, or renaming containers; --status reports mapping drift.",
-    "Containers using journald, local, syslog, or another log driver have no json-file path and are skipped."
+    "Reads container logs through Docker's API and labels each stream with its container name.",
+    "New and recreated containers are discovered automatically; container-ID path synchronization is not required.",
+    "The installer adds the rsyslog-docker package required by this mode."
   ]
 }

@@ -36,27 +36,89 @@ func TestRenderRsyslog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config := renderRsyslog(site, siteHash, profile, []dockerSource{{Service: "mealie", Path: "/var/lib/docker/containers/abc/abc-json.log"}}, "patate-du-cluster")
+	config := renderRsyslog(site, siteHash, profile, dockerRuntime{APIVersion: "1.52"}, "patate-du-cluster")
 	for _, wanted := range []string{
 		"# homelab-logging-profile: docker",
-		"# homelab-logging-profile-revision: 1",
+		"# homelab-logging-profile-revision: 2",
 		"homelab@32473 cluster=\\\"saint-cluster\\\" location=\\\"home\\\" role=\\\"lxc\\\" node=\\\"patate-du-cluster\\\" job=\\\"docker\\\"",
-		"File=\"/var/lib/docker/containers/abc/abc-json.log\"",
-		"Tag=\"mealie:\"",
+		"load=\"imdocker\"",
+		"ApiVersionStr=\"v1.52\"",
+		"PollingInterval=\"5\"",
+		`property(name="$.docker_service" position.from="1" position.to="48")`,
+		`re_extract($!metadata!Names`,
+		`{0,63})\$"`,
 		"queue.filename=\"alloy-journal\"",
 	} {
 		if !strings.Contains(config, wanted) {
 			t.Errorf("generated config is missing %q", wanted)
 		}
 	}
-	first := renderRsyslog(site, siteHash, profile, []dockerSource{{Service: "z", Path: "/z"}, {Service: "a", Path: "/a"}}, "node")
-	second := renderRsyslog(site, siteHash, profile, []dockerSource{{Service: "a", Path: "/a"}, {Service: "z", Path: "/z"}}, "node")
+	legacy := profile
+	legacy.Docker = Docker{Enabled: true, Mode: "files"}
+	first := renderRsyslog(site, siteHash, legacy, dockerRuntime{Sources: []dockerSource{{Service: "z", Path: "/z"}, {Service: "a", Path: "/a"}}}, "node")
+	second := renderRsyslog(site, siteHash, legacy, dockerRuntime{Sources: []dockerSource{{Service: "a", Path: "/a"}, {Service: "z", Path: "/z"}}}, "node")
 	if first != second {
 		t.Error("renderer is not deterministic")
 	}
-	withoutDockerLogs := renderRsyslog(site, siteHash, profile, nil, "node")
+	withoutDockerLogs := renderRsyslog(site, siteHash, legacy, dockerRuntime{}, "node")
 	if strings.Contains(withoutDockerLogs, `module(load="imfile"`) || strings.Contains(withoutDockerLogs, `ruleset(name="alloy_docker"`) {
 		t.Error("empty Docker discovery generated an imfile pipeline without inputs")
+	}
+}
+
+func TestDockerAPIModeDiscoversVersionAndInstallsPlugin(t *testing.T) {
+	t.Setenv("HLL_TESTING", "1")
+	client := newFakeClient()
+	client.exists["/var/lib/docker"] = true
+	application, out, _ := testApp(t, client, "patate-du-cluster")
+
+	if _, err := application.install(113, "docker"); err != nil {
+		t.Fatal(err)
+	}
+	if !client.packages["rsyslog-docker"] {
+		t.Fatal("Docker API mode did not install rsyslog-docker")
+	}
+	generated := string(client.files[application.site.RemoteConfig])
+	for _, wanted := range []string{
+		`load="imdocker"`,
+		`ApiVersionStr="v1.52"`,
+		`PollingInterval="5"`,
+		`re_extract($!metadata!Names`,
+	} {
+		if !strings.Contains(generated, wanted) {
+			t.Errorf("generated Docker API configuration is missing %q", wanted)
+		}
+	}
+	if strings.Contains(generated, "/var/lib/docker/containers/") {
+		t.Fatal("Docker API mode generated a container-ID file path")
+	}
+	if !strings.Contains(out.String(), "Installing rsyslog-docker") {
+		t.Fatalf("plugin installation was not reported:\n%s", out.String())
+	}
+	if err := application.status(113, "docker"); err != nil {
+		t.Fatalf("healthy Docker API status audit: %v", err)
+	}
+}
+
+func TestDockerProfileValidation(t *testing.T) {
+	profile, err := loadProfile("services/docker.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	invalid := profile
+	invalid.Docker.PollingInterval = 0
+	if err := invalid.validate(); err == nil {
+		t.Fatal("API mode without a polling interval was accepted")
+	}
+
+	legacy := profile
+	legacy.Docker = Docker{Enabled: true}
+	if err := legacy.validate(); err != nil {
+		t.Fatalf("legacy files mode should remain valid: %v", err)
+	}
+	if legacy.Docker.mode() != "files" {
+		t.Fatalf("legacy mode resolved to %q, want files", legacy.Docker.mode())
 	}
 }
 
@@ -64,6 +126,7 @@ type fakeClient struct {
 	files          map[string][]byte
 	exists         map[string]bool
 	services       map[string]bool
+	packages       map[string]bool
 	dockerOutput   string
 	containers     []Container
 	failValidation bool
@@ -75,6 +138,7 @@ func newFakeClient() *fakeClient {
 		files:      map[string][]byte{},
 		exists:     map[string]bool{},
 		services:   map[string]bool{},
+		packages:   map[string]bool{},
 		containers: []Container{{ID: 105, Status: "running", Name: "postgres"}},
 	}
 }
@@ -113,6 +177,11 @@ func (f *fakeClient) Exec(_ int, args ...string) (string, error) {
 			return f.dockerOutput, nil
 		}
 		return "", nil
+	case "docker":
+		if len(args) >= 2 && args[1] == "version" {
+			return "1.52\n", nil
+		}
+		return "", fmt.Errorf("unsupported docker command")
 	case "bash":
 		script := args[2]
 		if strings.Contains(script, "compgen") {
@@ -133,6 +202,10 @@ func (f *fakeClient) Exec(_ int, args ...string) (string, error) {
 		}
 		return "", nil
 	case "dpkg-query":
+		name := args[len(args)-1]
+		if f.packages[name] {
+			return "installed\n", nil
+		}
 		return "", fmt.Errorf("package missing")
 	case "cp":
 		data, ok := f.files[args[1]]
@@ -157,7 +230,14 @@ func (f *fakeClient) Exec(_ int, args ...string) (string, error) {
 			return "", fmt.Errorf("invalid")
 		}
 		return "", nil
-	case "logger", "apt-get", "env":
+	case "env":
+		for _, arg := range args {
+			if arg == "rsyslog" || arg == "rsyslog-docker" {
+				f.packages[arg] = true
+			}
+		}
+		return "", nil
+	case "logger", "apt-get":
 		return "", nil
 	default:
 		return "", fmt.Errorf("unsupported command %q", args[0])
@@ -224,7 +304,11 @@ func TestGeneratedConfigurationsAreAcceptedByRsyslog(t *testing.T) {
 		workDirectory = "/var/spool/rsyslog"
 	}
 	for _, profile := range profiles {
-		config := fmt.Sprintf("global(workDirectory=\"%s\")\n%s", workDirectory, renderRsyslog(site, siteHash, profile, nil, "test-node"))
+		runtime := dockerRuntime{}
+		if profile.Docker.Enabled && profile.Docker.mode() == "api" {
+			runtime.APIVersion = "1.52"
+		}
+		config := fmt.Sprintf("global(workDirectory=\"%s\")\n%s", workDirectory, renderRsyslog(site, siteHash, profile, runtime, "test-node"))
 		path := filepath.Join(work, profile.Name+".conf")
 		if err := os.WriteFile(path, []byte(config), 0644); err != nil {
 			t.Fatal(err)

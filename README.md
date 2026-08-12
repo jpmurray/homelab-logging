@@ -16,7 +16,7 @@ This is intentionally a personal homelab tool. It uses the Go standard library, 
 - Rolls back managed and legacy files if deployment fails.
 - Avoids restarts when the deployed configuration is byte-identical.
 - Audits, inventories, synchronizes, and refreshes migrated LXCs.
-- Discovers Docker `json-file` paths and labels them by container name.
+- Continuously discovers Docker containers through the Docker API and labels them by container name.
 - Sends `cluster`, `location`, `node`, `role`, and `job` as RFC5424 structured data.
 
 ## Requirements
@@ -80,18 +80,18 @@ Use `--config PATH` or `--profiles-dir PATH` to override the files beside the bi
 Create a GitHub release by updating `VERSION`, committing the change, and pushing a matching numeric tag:
 
 ```bash
-git tag 1.1.0
-git push origin 1.1.0
+git tag 1.2.0
+git push origin 1.2.0
 ```
 
-GitHub Actions tests the project and publishes `homelab-logging-1.1.0-linux-amd64.zip`. Download that archive from the repository's Releases page and copy it to each Proxmox node.
+GitHub Actions tests the project and publishes `homelab-logging-1.2.0-linux-amd64.zip`. Download that archive from the repository's Releases page and copy it to each Proxmox node.
 
 On a node, keep releases under `/opt` and point `current` at the active one:
 
 ```bash
 mkdir -p /opt/homelab-logging/releases
-unzip homelab-logging-1.1.0-linux-amd64.zip -d /opt/homelab-logging/releases
-ln -sfn /opt/homelab-logging/releases/homelab-logging-1.1.0 /opt/homelab-logging/current
+unzip homelab-logging-1.2.0-linux-amd64.zip -d /opt/homelab-logging/releases
+ln -sfn /opt/homelab-logging/releases/homelab-logging-1.2.0 /opt/homelab-logging/current
 ln -sfn /opt/homelab-logging/current/homelab-logging /usr/local/bin/homelab-logging
 
 homelab-logging --validate
@@ -115,7 +115,7 @@ A write operation:
 
 1. verifies the CT exists and is running;
 2. checks required paths and sources;
-3. installs rsyslog when absent;
+3. installs rsyslog and any profile-required input plugin when absent;
 4. generates the candidate;
 5. returns early when the deployed file is identical and no legacy file is active;
 6. backs up the current managed file;
@@ -140,7 +140,7 @@ job=syslog
 service=postgres
 ```
 
-Docker records use `job=docker` and `service=<container_name>`. Task identifiers and filenames remain in message bodies instead of becoming high-cardinality Loki labels.
+Docker records use `job=docker` and `service=<container_name>`. The generic Docker profile uses rsyslog's Docker API input, so new and recreated containers are picked up automatically without regenerating ID-specific file mappings. Task identifiers and filenames remain in message bodies instead of becoming high-cardinality Loki labels.
 
 ## Development
 

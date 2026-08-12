@@ -7,11 +7,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var dockerAPIVersionPattern = regexp.MustCompile(`^1[.][0-9]+$`)
 
 type app struct {
 	site          SiteConfig
@@ -177,16 +180,27 @@ func (a *app) detectProfile(ctid int) (Profile, error) {
 	return best[0], nil
 }
 
-func (a *app) dockerSources(ctid int, profile Profile) []dockerSource {
+func (a *app) dockerRuntime(ctid int, profile Profile) (dockerRuntime, error) {
 	if !profile.Docker.Enabled {
-		return nil
+		return dockerRuntime{}, nil
+	}
+	if profile.Docker.mode() == "api" {
+		output, err := a.pct.Exec(ctid, "docker", "version", "--format", "{{.Server.APIVersion}}")
+		if err != nil {
+			return dockerRuntime{}, fmt.Errorf("discover Docker API version in CT %d: %w", ctid, err)
+		}
+		apiVersion := strings.TrimSpace(output)
+		if !dockerAPIVersionPattern.MatchString(apiVersion) {
+			return dockerRuntime{}, fmt.Errorf("Docker returned invalid API version %q in CT %d", apiVersion, ctid)
+		}
+		return dockerRuntime{APIVersion: apiVersion}, nil
 	}
 	output, err := a.pct.Exec(ctid, "sh", "-c", `
 for id in $(docker ps -aq 2>/dev/null); do
     docker inspect --format "{{.Name}}|{{.LogPath}}" "$id"
 done`)
 	if err != nil {
-		return nil
+		return dockerRuntime{}, nil
 	}
 	seen := map[string]bool{}
 	var sources []dockerSource
@@ -210,7 +224,7 @@ done`)
 		}
 		return sources[i].Service < sources[j].Service
 	})
-	return sources
+	return dockerRuntime{Sources: sources}, nil
 }
 
 func (a *app) checkRequired(ctid int, profile Profile) error {
@@ -241,15 +255,32 @@ func (a *app) activeLegacy(ctid int) []string {
 	return active
 }
 
-func (a *app) ensureRsyslog(ctid int) error {
-	if _, err := a.pct.Exec(ctid, "sh", "-c", "command -v rsyslogd >/dev/null 2>&1"); err == nil {
+func (a *app) dockerPluginInstalled(ctid int) bool {
+	output, err := a.pct.Exec(ctid, "dpkg-query", "-W", "-f=${db:Status-Status}", "rsyslog-docker")
+	return err == nil && strings.TrimSpace(output) == "installed"
+}
+
+func (a *app) ensureRsyslog(ctid int, profile Profile) error {
+	var missing []string
+	if _, err := a.pct.Exec(ctid, "sh", "-c", "command -v rsyslogd >/dev/null 2>&1"); err != nil {
+		missing = append(missing, "rsyslog")
+	}
+	if profile.Docker.Enabled && profile.Docker.mode() == "api" {
+		if !a.dockerPluginInstalled(ctid) {
+			missing = append(missing, "rsyslog-docker")
+		}
+	}
+	if len(missing) == 0 {
 		return nil
 	}
-	a.info("Installing rsyslog in CT %d", ctid)
+	a.info("Installing %s in CT %d", strings.Join(missing, " and "), ctid)
 	if _, err := a.pct.Exec(ctid, "apt-get", "update"); err != nil {
 		return err
 	}
-	_, err := a.pct.Exec(ctid, "env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y", "rsyslog")
+	args := []string{"DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y"}
+	args = append(args, missing...)
+	execArgs := append([]string{"env"}, args...)
+	_, err := a.pct.Exec(ctid, execArgs...)
 	return err
 }
 
@@ -264,7 +295,7 @@ func (a *app) deploy(ctid int, profile Profile, generated []byte) (result deploy
 	}
 	defer os.Remove(lockPath)
 
-	if err = a.ensureRsyslog(ctid); err != nil {
+	if err = a.ensureRsyslog(ctid, profile); err != nil {
 		return result, err
 	}
 	if err = a.checkRequired(ctid, profile); err != nil {
@@ -401,7 +432,10 @@ func (a *app) install(ctid int, profileName string) (deploymentResult, error) {
 	if err != nil {
 		return deploymentResult{}, err
 	}
-	docker := a.dockerSources(ctid, profile)
+	docker, err := a.dockerRuntime(ctid, profile)
+	if err != nil {
+		return deploymentResult{}, err
+	}
 	generated := []byte(renderRsyslog(a.site, a.siteHash, profile, docker, a.node))
 	if err := a.checkRequired(ctid, profile); err != nil {
 		return deploymentResult{}, err
@@ -461,7 +495,10 @@ func (a *app) status(ctid int, profileName string) error {
 	if err != nil {
 		return err
 	}
-	docker := a.dockerSources(ctid, profile)
+	docker, err := a.dockerRuntime(ctid, profile)
+	if err != nil {
+		return err
+	}
 	generated := []byte(renderRsyslog(a.site, a.siteHash, profile, docker, a.node))
 	host, _ := a.pct.Exec(ctid, "hostname")
 	fmt.Fprintf(a.out, "Audit for CT %d (%s)\n%s\n", ctid, strings.TrimSpace(host), strings.Repeat("-", 64))
@@ -476,6 +513,9 @@ func (a *app) status(ctid int, profileName string) error {
 	}
 	_, err = a.pct.Exec(ctid, "sh", "-c", "command -v rsyslogd >/dev/null 2>&1")
 	check(err == nil, "rsyslog is installed", "rsyslog is not installed")
+	if profile.Docker.Enabled && profile.Docker.mode() == "api" {
+		check(a.dockerPluginInstalled(ctid), "rsyslog Docker API input is installed", "rsyslog Docker API input is not installed")
+	}
 	_, err = a.pct.Exec(ctid, "systemctl", "is-active", "--quiet", "rsyslog")
 	check(err == nil, "rsyslog is running", "rsyslog is not running")
 
@@ -533,8 +573,10 @@ func (a *app) status(ctid int, profileName string) error {
 		}
 	}
 	if profile.Docker.Enabled {
-		if len(docker) > 0 {
-			fmt.Fprintf(a.out, "[ok]   Docker log mappings: %d\n", len(docker))
+		if profile.Docker.mode() == "api" {
+			fmt.Fprintf(a.out, "[ok]   Docker API discovery: v%s, polling every %ds\n", docker.APIVersion, profile.Docker.PollingInterval)
+		} else if len(docker.Sources) > 0 {
+			fmt.Fprintf(a.out, "[ok]   Docker log mappings: %d\n", len(docker.Sources))
 		} else {
 			fmt.Fprintln(a.out, "[warn] no Docker json-file log paths were discovered")
 		}

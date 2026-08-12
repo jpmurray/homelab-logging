@@ -6,7 +6,7 @@
 LXC journal/syslog ─┐
 application files ──┼─> rsyslog RFC5424/TCP ─> Alloy :1514 ─> Loki
 selected task logs ─┤
-Docker json files ──┘
+Docker API ─────────┘
 ```
 
 Rsyslog is the only transport inside a target LXC. File and task inputs use dedicated rulesets ending in `stop` so they do not fall through into journal forwarding. Disk-assisted queues retry indefinitely, and rsyslog owns source offsets. New file inputs begin at the tail.

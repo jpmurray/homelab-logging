@@ -57,7 +57,16 @@ type Source struct {
 }
 
 type Docker struct {
-	Enabled bool `json:"enabled"`
+	Enabled         bool   `json:"enabled"`
+	Mode            string `json:"mode,omitempty"`
+	PollingInterval int    `json:"polling_interval,omitempty"`
+}
+
+func (d Docker) mode() string {
+	if d.Mode == "" {
+		return "files"
+	}
+	return d.Mode
 }
 
 type Detection struct {
@@ -184,6 +193,24 @@ func (p Profile) validate() error {
 	for _, probe := range p.Detect.Probes {
 		if !contains([]string{"path", "service", "command", "package"}, probe.Type) || probe.Value == "" || len(probe.Value) > 255 || strings.Contains(probe.Value, "\n") {
 			return fmt.Errorf("invalid detection probe")
+		}
+	}
+	if !p.Docker.Enabled {
+		if p.Docker.Mode != "" || p.Docker.PollingInterval != 0 {
+			return fmt.Errorf("docker mode options require docker.enabled")
+		}
+	} else {
+		switch p.Docker.mode() {
+		case "files":
+			if p.Docker.PollingInterval != 0 {
+				return fmt.Errorf("docker.polling_interval is only valid in api mode")
+			}
+		case "api":
+			if p.Docker.PollingInterval < 1 || p.Docker.PollingInterval > 3600 {
+				return fmt.Errorf("docker.polling_interval must be between 1 and 3600 in api mode")
+			}
+		default:
+			return fmt.Errorf("docker.mode must be files or api")
 		}
 	}
 	if !p.Journal && len(p.Files) == 0 && len(p.Tasks) == 0 && !p.Docker.Enabled {

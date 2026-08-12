@@ -14,7 +14,9 @@ Every profile contains:
 | `required_paths` | Paths that must exist before installation. |
 | `files` | Regular file/glob inputs. |
 | `tasks` | File/glob inputs that may prepend the source filename. |
-| `docker.enabled` | Discover Docker `json-file` paths at generation time. |
+| `docker.enabled` | Enable Docker container log collection. |
+| `docker.mode` | `api` for continuous Docker API discovery or `files` for legacy generation-time `json-file` discovery. |
+| `docker.polling_interval` | Docker API discovery interval in seconds (required for `api`, 1–3600). |
 | `detect` | Safe declarative auto-detection probes. |
 | `test_service` | APP-NAME used by the post-install test message. |
 | `notes` | Operational caveats shown after install and during status. |
@@ -35,6 +37,22 @@ Every profile contains:
 `facility`, `severity`, `required`, and `include_filename` are optional. `freshStartTail` is deliberately controlled by the engine, not profiles.
 
 Task sources with `include_filename: true` prepend the basename in square brackets. This is how PBS keeps its UPID available in Loki without using it as a label.
+
+## Docker
+
+The preferred universal configuration is:
+
+```json
+"docker": {
+  "enabled": true,
+  "mode": "api",
+  "polling_interval": 5
+}
+```
+
+API mode installs rsyslog's `imdocker` plugin, reads logs through `/var/run/docker.sock`, and uses Docker's `Names` metadata as the Loki `service` label. It discovers new and recreated containers without regenerating rsyslog configuration. Containers already running when rsyslog starts begin at their latest line; containers discovered afterward are followed from the beginning.
+
+`files` mode is retained for compatibility. It snapshots `json-file` paths when configuration is generated and therefore needs synchronization after containers are created, removed, renamed, or recreated. An omitted `mode` defaults to `files` for older profiles.
 
 ## Detection
 

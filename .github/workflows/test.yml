@@ -15,7 +15,7 @@ jobs:
       - name: Install rsyslog
         run: |
           sudo apt-get update
-          sudo apt-get install -y rsyslog
+          sudo apt-get install -y rsyslog rsyslog-docker
           sudo install -d -o "$USER" -g "$USER" /etc/rsyslog.d/homelab-logging-tests
       - name: Check formatting
         run: test -z "$(gofmt -l .)"
