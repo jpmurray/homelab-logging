@@ -1,10 +1,16 @@
-.PHONY: test validate package
+.PHONY: build test validate package clean
+
+build:
+	go build -o homelab-logging .
 
 test:
-	./tests/run.sh
+	go test ./...
 
 validate:
-	./install.sh --validate
+	go run . --validate
 
 package: test
-	./scripts/package.sh
+	go run ./cmd/package
+
+clean:
+	rm -f homelab-logging
