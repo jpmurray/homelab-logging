@@ -204,9 +204,13 @@ func TestGeneratedConfigurationsAreAcceptedByRsyslog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	work := t.TempDir()
-	// Ubuntu's rsyslogd may validate as its unprivileged service user. Go creates
-	// test directories with mode 0700, so make this disposable directory traversable.
+	work, err := os.MkdirTemp("", "homelab-logging-rsyslog-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(work) })
+	// Ubuntu's rsyslogd may validate as its unprivileged service user, so make
+	// this disposable directory traversable.
 	if err := os.Chmod(work, 0755); err != nil {
 		t.Fatal(err)
 	}
