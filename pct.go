@@ -36,14 +36,15 @@ func newPCTClient(binary string) *pctClient {
 
 func (p *pctClient) command(args ...string) (string, error) {
 	cmd := exec.Command(p.binary, args...)
-	var output bytes.Buffer
-	cmd.Stdout = &output
-	cmd.Stderr = &output
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return output.String(), fmt.Errorf("%s %s: %w: %s", p.binary, strings.Join(args, " "), err, strings.TrimSpace(output.String()))
+		details := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
+		return stdout.String(), fmt.Errorf("%s %s: %w: %s", p.binary, strings.Join(args, " "), err, details)
 	}
-	return output.String(), nil
+	return stdout.String(), nil
 }
 
 func (p *pctClient) List() ([]Container, error) {

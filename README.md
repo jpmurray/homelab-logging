@@ -80,18 +80,18 @@ Use `--config PATH` or `--profiles-dir PATH` to override the files beside the bi
 Create a GitHub release by updating `VERSION`, committing the change, and pushing a matching numeric tag:
 
 ```bash
-git tag 1.2.1
-git push origin 1.2.1
+git tag 1.2.2
+git push origin 1.2.2
 ```
 
-GitHub Actions tests the project and publishes `homelab-logging-1.2.1-linux-amd64.zip`. Download that archive from the repository's Releases page and copy it to each Proxmox node.
+GitHub Actions tests the project and publishes `homelab-logging-1.2.2-linux-amd64.zip`. Download that archive from the repository's Releases page and copy it to each Proxmox node.
 
 On a node, keep releases under `/opt` and point `current` at the active one:
 
 ```bash
 mkdir -p /opt/homelab-logging/releases
-unzip homelab-logging-1.2.1-linux-amd64.zip -d /opt/homelab-logging/releases
-ln -sfn /opt/homelab-logging/releases/homelab-logging-1.2.1 /opt/homelab-logging/current
+unzip homelab-logging-1.2.2-linux-amd64.zip -d /opt/homelab-logging/releases
+ln -sfn /opt/homelab-logging/releases/homelab-logging-1.2.2 /opt/homelab-logging/current
 ln -sfn /opt/homelab-logging/current/homelab-logging /usr/local/bin/homelab-logging
 
 homelab-logging --validate
