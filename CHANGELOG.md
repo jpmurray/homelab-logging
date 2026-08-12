@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-12
+
 ### Added
 
 - Go implementation of profile validation, service detection, rsyslog rendering, deployment, status, inventory, synchronization, and migration.
@@ -17,9 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Build, test, validation, and packaging commands now use Go and the standard library.
-- Release archives and directories use names such as `homelab-logging-1.4.0` without a `v` prefix.
+- Release archives and directories use names such as `homelab-logging-1.1.0` without a `v` prefix.
 - Continuous integration now formats, vets, tests, and builds the Go application.
+
+### Fixed
+
+- Rsyslog syntax tests now use an AppArmor-approved configuration path on Ubuntu CI runners.
+- Docker profiles without discovered `json-file` mappings no longer generate an empty `imfile` pipeline that rsyslog rejects.
 
 ### Removed
 
 - Bash installer, shell libraries, shell test harness, and the runtime dependency on `jq`.
+
+[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/jpmurray/homelab-logging/compare/1.0.0...1.1.0
+[1.0.0]: https://github.com/jpmurray/homelab-logging/releases/tag/1.0.0

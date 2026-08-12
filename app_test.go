@@ -54,6 +54,10 @@ func TestRenderRsyslog(t *testing.T) {
 	if first != second {
 		t.Error("renderer is not deterministic")
 	}
+	withoutDockerLogs := renderRsyslog(site, siteHash, profile, nil, "node")
+	if strings.Contains(withoutDockerLogs, `module(load="imfile"`) || strings.Contains(withoutDockerLogs, `ruleset(name="alloy_docker"`) {
+		t.Error("empty Docker discovery generated an imfile pipeline without inputs")
+	}
 }
 
 type fakeClient struct {
@@ -204,9 +208,23 @@ func TestGeneratedConfigurationsAreAcceptedByRsyslog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	work := t.TempDir()
+	base := os.Getenv("HLL_RSYSLOG_TEST_DIR")
+	work, err := os.MkdirTemp(base, "homelab-logging-rsyslog-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(work) })
+	// Ubuntu's rsyslogd may validate as its unprivileged service user, so make
+	// this disposable directory traversable.
+	if err := os.Chmod(work, 0755); err != nil {
+		t.Fatal(err)
+	}
+	workDirectory := work
+	if base != "" {
+		workDirectory = "/var/spool/rsyslog"
+	}
 	for _, profile := range profiles {
-		config := fmt.Sprintf("global(workDirectory=\"%s\")\n%s", work, renderRsyslog(site, siteHash, profile, nil, "test-node"))
+		config := fmt.Sprintf("global(workDirectory=\"%s\")\n%s", workDirectory, renderRsyslog(site, siteHash, profile, nil, "test-node"))
 		path := filepath.Join(work, profile.Name+".conf")
 		if err := os.WriteFile(path, []byte(config), 0644); err != nil {
 			t.Fatal(err)
