@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "unifi-os",
+  "description": "UniFi OS journal-first logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "unifi.service"}, {"type": "path", "value": "/usr/lib/unifi"}]},
+  "test_service": "unifi-os-test",
+  "notes": ["Journal only for v1; avoid ingesting controller databases or high-volume packet data."]
+}

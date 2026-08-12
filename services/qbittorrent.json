@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "qbittorrent",
+  "description": "qBittorrent journal-first logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 60,
+    "probes": [
+      {"type": "service", "value": "qbittorrent-nox.service"},
+      {"type": "service", "value": "qbittorrent.service"}
+    ]
+  },
+  "test_service": "qbittorrent-test",
+  "notes": ["Journal only; inspect qBittorrent.conf before adding application file logs."]
+}

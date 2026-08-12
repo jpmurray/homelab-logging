@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "syncthing",
+  "description": "Syncthing journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "command", "value": "syncthing"}, {"type": "package", "value": "syncthing"}]},
+  "test_service": "syncthing-test",
+  "notes": ["Journal only for v1."]
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "technitium",
+  "description": "Technitium DNS Server journal-first logging",
+  "journal": true,
+  "required_paths": ["/var/log/technitium"],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 70,
+    "probes": [
+      {"type": "service", "value": "technitium.service"},
+      {"type": "path", "value": "/var/log/technitium"}
+    ]
+  },
+  "test_service": "technitium-test",
+  "notes": [
+    "Journal only for v1.",
+    "DNS file logs are intentionally excluded until server events can be separated from high-volume query logs."
+  ]
+}

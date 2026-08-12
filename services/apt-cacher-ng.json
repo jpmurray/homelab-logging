@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "apt-cacher-ng",
+  "description": "Apt-Cacher-NG journal and request log",
+  "journal": true,
+  "required_paths": ["/var/log/apt-cacher-ng"],
+  "files": [
+    {"path": "/var/log/apt-cacher-ng/apt-cacher.log", "service": "apt-cacher-ng", "required": true}
+  ],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 80,
+    "probes": [
+      {"type": "service", "value": "apt-cacher-ng.service"},
+      {"type": "package", "value": "apt-cacher-ng"}
+    ]
+  },
+  "test_service": "apt-cacher-ng-test",
+  "notes": ["The empty error log is not collected separately."]
+}

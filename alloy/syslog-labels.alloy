@@ -1,0 +1,79 @@
+// Merge this contract into the existing TCP/1514 pipeline.
+// This Saint-Cluster reference uses the existing loki.write.local receiver.
+
+loki.relabel "homelab_syslog" {
+  // Required by Alloy even when this component is used only for its exported rules.
+  forward_to = []
+
+  // Compatibility defaults for existing Proxmox senders without structured data.
+  rule {
+    target_label = "cluster"
+    replacement  = "saint-cluster"
+  }
+  rule {
+    target_label = "location"
+    replacement  = "home"
+  }
+  rule {
+    target_label = "role"
+    replacement  = "proxmox-host"
+  }
+  rule {
+    target_label = "job"
+    replacement  = "syslog"
+  }
+  // For legacy Proxmox-host senders, the syslog hostname is the node.
+  // LXC senders override this fallback with structured node metadata below.
+  rule {
+    source_labels = ["__syslog_message_hostname"]
+    target_label  = "node"
+  }
+
+  // Structured values emitted by homelab-logging override the defaults.
+  rule {
+    source_labels = ["__syslog_message_sd_homelab_32473_cluster"]
+    regex         = "(.+)"
+    target_label  = "cluster"
+  }
+  rule {
+    source_labels = ["__syslog_message_sd_homelab_32473_location"]
+    regex         = "(.+)"
+    target_label  = "location"
+  }
+  rule {
+    source_labels = ["__syslog_message_sd_homelab_32473_role"]
+    regex         = "(.+)"
+    target_label  = "role"
+  }
+  rule {
+    source_labels = ["__syslog_message_sd_homelab_32473_node"]
+    regex         = "(.+)"
+    target_label  = "node"
+  }
+  rule {
+    source_labels = ["__syslog_message_sd_homelab_32473_job"]
+    regex         = "(.+)"
+    target_label  = "job"
+  }
+  rule {
+    source_labels = ["__syslog_message_hostname"]
+    target_label  = "host"
+  }
+  rule {
+    source_labels = ["__syslog_message_app_name"]
+    target_label  = "service"
+  }
+}
+
+loki.source.syslog "homelab_tcp" {
+  listener {
+    address                = "0.0.0.0:1514"
+    protocol               = "tcp"
+    syslog_format          = "rfc5424"
+    use_incoming_timestamp = true
+    label_structured_data  = true
+  }
+
+  relabel_rules = loki.relabel.homelab_syslog.rules
+  forward_to    = [loki.write.local.receiver]
+}

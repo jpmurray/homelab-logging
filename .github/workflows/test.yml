@@ -1,0 +1,19 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install runtime dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq rsyslog shellcheck
+      - name: ShellCheck
+        run: shellcheck install.sh lib/*.sh scripts/*.sh tests/*.sh
+      - name: Test
+        run: make test
+      - name: Validate generated rsyslog syntax
+        run: ./tests/validate-rsyslog.sh

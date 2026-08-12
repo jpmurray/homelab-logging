@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "forgejo",
+  "description": "Forgejo journal-first logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "forgejo.service"}, {"type": "service", "value": "gitea.service"}]},
+  "test_service": "forgejo-test",
+  "notes": ["Journal only unless Forgejo is explicitly configured to write a separate operational log."]
+}

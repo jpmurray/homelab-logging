@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "postgres",
+  "description": "PostgreSQL journal and server logs",
+  "journal": true,
+  "required_paths": ["/var/log/postgresql"],
+  "files": [
+    {"path": "/var/log/postgresql/postgresql-*-main.log", "service": "postgres", "required": true}
+  ],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 80,
+    "probes": [
+      {"type": "service", "value": "postgresql.service"},
+      {"type": "path", "value": "/var/log/postgresql"},
+      {"type": "package", "value": "postgresql"}
+    ]
+  },
+  "test_service": "postgres-test",
+  "notes": ["Tails only the active main log pattern; rotated logs are not imported."]
+}

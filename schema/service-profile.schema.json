@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://homelab.invalid/schemas/service-profile-v1.json",
+  "title": "homelab-logging service profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile_revision", "name", "description", "journal", "required_paths", "files", "tasks", "docker", "detect", "test_service", "notes"],
+  "anyOf": [
+    {"properties": {"journal": {"const": true}}},
+    {"properties": {"files": {"minItems": 1}}},
+    {"properties": {"tasks": {"minItems": 1}}},
+    {"properties": {"docker": {"properties": {"enabled": {"const": true}}}}}
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile_revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "name": {"$ref": "#/$defs/name"},
+    "description": {"type": "string", "minLength": 1},
+    "journal": {"type": "boolean"},
+    "required_paths": {"type": "array", "items": {"$ref": "#/$defs/path"}},
+    "files": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+    "tasks": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+    "docker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {"enabled": {"type": "boolean"}}
+    },
+    "detect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "priority", "probes"],
+      "properties": {
+        "mode": {"enum": ["all", "any"]},
+        "priority": {"type": "integer", "minimum": 0, "maximum": 1000},
+        "probes": {"type": "array", "items": {"$ref": "#/$defs/probe"}}
+      }
+    },
+    "test_service": {"$ref": "#/$defs/name"},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"},
+    "path": {"type": "string", "pattern": "^/[^\\n\\\"]*$"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "service"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "service": {"$ref": "#/$defs/name"},
+        "required": {"type": "boolean"},
+        "facility": {"type": "string", "pattern": "^(auth|authpriv|cron|daemon|kern|local[0-7]|mail|news|syslog|user|uucp)$"},
+        "severity": {"type": "string", "pattern": "^(debug|info|notice|warning|err|crit|alert|emerg)$"},
+        "include_filename": {"type": "boolean"}
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {
+        "type": {"enum": ["path", "service", "command", "package"]},
+        "value": {"type": "string", "minLength": 1, "maxLength": 255}
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "loki",
+  "description": "Grafana Loki journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "loki.service"}]},
+  "test_service": "loki-test",
+  "notes": ["Journal only; Loki data and WAL files are not logs and are never tailed."]
+}

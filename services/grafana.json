@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "grafana",
+  "description": "Grafana journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "grafana-server.service"}]},
+  "test_service": "grafana-test",
+  "notes": ["Journal only for v1."]
+}

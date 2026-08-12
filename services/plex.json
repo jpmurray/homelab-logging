@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "plex",
+  "description": "Plex Media Server journal-first logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "plexmediaserver.service"}]},
+  "test_service": "plex-test",
+  "notes": ["Journal only; Plex application logs can be added after their operational value and volume are reviewed."]
+}

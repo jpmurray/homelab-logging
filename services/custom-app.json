@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "custom-app",
+  "description": "Explicit journal profile for a custom Debian application",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 0, "probes": []},
+  "test_service": "custom-app-test",
+  "notes": ["Explicit selection only; add application and queue sources after their logging framework is identified."]
+}

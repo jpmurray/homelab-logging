@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "pbs",
+  "description": "Proxmox Backup Server with selected task and API logs",
+  "journal": true,
+  "required_paths": ["/var/log/proxmox-backup"],
+  "files": [
+    {"path": "/var/log/proxmox-backup/api/access.log", "service": "pbs-access", "required": false},
+    {"path": "/var/log/proxmox-backup/api/auth.log", "service": "pbs-auth", "required": false}
+  ],
+  "tasks": [
+    {"path": "/var/log/proxmox-backup/tasks/*/UPID:*:backup:*", "service": "pbs-task", "required": false, "include_filename": true},
+    {"path": "/var/log/proxmox-backup/tasks/*/UPID:*:prunejob:*", "service": "pbs-task", "required": false, "include_filename": true},
+    {"path": "/var/log/proxmox-backup/tasks/*/UPID:*:garbage_collection:*", "service": "pbs-task", "required": false, "include_filename": true},
+    {"path": "/var/log/proxmox-backup/tasks/*/UPID:*:syncjob:*", "service": "pbs-task", "required": false, "include_filename": true}
+  ],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 100,
+    "probes": [
+      {"type": "path", "value": "/var/log/proxmox-backup"},
+      {"type": "service", "value": "proxmox-backup.service"}
+    ]
+  },
+  "test_service": "pbs-test",
+  "notes": [
+    "Collects backup, prunejob, garbage_collection, and syncjob task logs.",
+    "verificationjob is intentionally excluded because seven observed files consumed about 985 MB.",
+    "Administrative task types such as aptupdate, termproxy, and logrotate are intentionally excluded."
+  ]
+}

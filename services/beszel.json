@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "beszel",
+  "description": "Beszel hub or agent journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 60,
+    "probes": [
+      {"type": "service", "value": "beszel.service"},
+      {"type": "service", "value": "beszel-hub.service"},
+      {"type": "service", "value": "beszel-agent.service"}
+    ]
+  },
+  "test_service": "beszel-test",
+  "notes": ["Journal only; supports Beszel hub and agent systemd units."]
+}

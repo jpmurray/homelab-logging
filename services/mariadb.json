@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "mariadb",
+  "description": "MariaDB journal-first logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 70,
+    "probes": [
+      {"type": "service", "value": "mariadb.service"},
+      {"type": "package", "value": "mariadb-server"}
+    ]
+  },
+  "test_service": "mariadb-test",
+  "notes": ["Journal only; database internals under /var/lib/mysql are not tailed."]
+}

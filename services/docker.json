@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "docker",
+  "description": "Generic Docker host using container names as services",
+  "journal": true,
+  "required_paths": ["/var/lib/docker"],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": true},
+  "detect": {
+    "mode": "any",
+    "priority": 10,
+    "probes": [
+      {"type": "command", "value": "docker"},
+      {"type": "path", "value": "/var/lib/docker"}
+    ]
+  },
+  "test_service": "docker-test",
+  "notes": [
+    "Discovers every container using Docker's json-file logging driver and labels it by container name.",
+    "Re-run the installer after adding, removing, or renaming containers; --status reports mapping drift.",
+    "Containers using journald, local, syslog, or another log driver have no json-file path and are skipped."
+  ]
+}

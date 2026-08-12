@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "cluster": "saint-cluster",
+  "location": "home",
+  "origin_role": "lxc",
+  "alloy": {
+    "host": "100.90.189.45",
+    "port": 1514,
+    "protocol": "tcp"
+  },
+  "remote_config": "/etc/rsyslog.d/90-homelab-alloy.conf",
+  "legacy_configs": [
+    "/etc/rsyslog.d/90-alloy.conf"
+  ]
+}

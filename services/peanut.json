@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "peanut",
+  "description": "PeaNUT journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "peanut.service"}]},
+  "test_service": "peanut-test",
+  "notes": ["Journal only for v1; use the Docker profile instead if this deployment is containerized."]
+}
