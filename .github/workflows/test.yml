@@ -8,12 +8,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install runtime dependencies
-        run: sudo apt-get update && sudo apt-get install -y jq rsyslog shellcheck
-      - name: ShellCheck
-        run: shellcheck install.sh lib/*.sh scripts/*.sh tests/*.sh
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install rsyslog
+        run: sudo apt-get update && sudo apt-get install -y rsyslog
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        run: go vet ./...
       - name: Test
-        run: make test
-      - name: Validate generated rsyslog syntax
-        run: ./tests/validate-rsyslog.sh
+        run: go test ./...
+      - name: Build
+        run: go build .

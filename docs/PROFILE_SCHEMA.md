@@ -1,6 +1,6 @@
 # Profile schema v1
 
-The canonical machine-readable schema is `schema/service-profile.schema.json`. Runtime validation is implemented with `jq` so the installer needs no schema-validator package.
+The canonical machine-readable schema is `schema/service-profile.schema.json`. Runtime validation is implemented directly in Go with the standard library, including rejection of unknown JSON fields.
 
 Every profile contains:
 
