@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Rsyslog syntax tests now use an AppArmor-approved configuration path on Ubuntu CI runners.
+- Docker profiles without discovered `json-file` mappings no longer generate an empty `imfile` pipeline that rsyslog rejects.
 
 ### Removed
 

@@ -21,12 +21,13 @@ func renderRsyslog(site SiteConfig, siteHash string, profile Profile, docker []d
 	fmt.Fprintf(&b, "# homelab-logging-site-sha256: %s\n\n", siteHash)
 
 	hasFiles := len(profile.Files) > 0 || len(profile.Tasks) > 0
-	if hasFiles || profile.Docker.Enabled {
+	hasDocker := profile.Docker.Enabled && len(docker) > 0
+	if hasFiles || hasDocker {
 		b.WriteString("module(load=\"imfile\" PollingInterval=\"10\")\n\n")
 	}
 
 	emitForwardTemplate(&b, "AlloySyslogForward", "syslog", site, node)
-	if profile.Docker.Enabled {
+	if hasDocker {
 		emitForwardTemplate(&b, "AlloyDockerForward", "docker", site, node)
 	}
 	hasTaskMetadata := false
@@ -42,7 +43,7 @@ func renderRsyslog(site SiteConfig, siteHash string, profile Profile, docker []d
 	if hasTaskMetadata {
 		emitTaskRuleset(&b, site)
 	}
-	if profile.Docker.Enabled {
+	if hasDocker {
 		emitRuleset(&b, "alloy_docker", site, "AlloyDockerForward", "alloy-docker")
 	}
 

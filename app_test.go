@@ -54,6 +54,10 @@ func TestRenderRsyslog(t *testing.T) {
 	if first != second {
 		t.Error("renderer is not deterministic")
 	}
+	withoutDockerLogs := renderRsyslog(site, siteHash, profile, nil, "node")
+	if strings.Contains(withoutDockerLogs, `module(load="imfile"`) || strings.Contains(withoutDockerLogs, `ruleset(name="alloy_docker"`) {
+		t.Error("empty Docker discovery generated an imfile pipeline without inputs")
+	}
 }
 
 type fakeClient struct {
