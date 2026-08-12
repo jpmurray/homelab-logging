@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release archives and directories use names such as `homelab-logging-1.4.0` without a `v` prefix.
 - Continuous integration now formats, vets, tests, and builds the Go application.
 
+### Fixed
+
+- Rsyslog syntax tests now use a traversable temporary directory so validation works with Ubuntu's unprivileged rsyslog process.
+
 ### Removed
 
 - Bash installer, shell libraries, shell test harness, and the runtime dependency on `jq`.

@@ -205,6 +205,11 @@ func TestGeneratedConfigurationsAreAcceptedByRsyslog(t *testing.T) {
 		t.Fatal(err)
 	}
 	work := t.TempDir()
+	// Ubuntu's rsyslogd may validate as its unprivileged service user. Go creates
+	// test directories with mode 0700, so make this disposable directory traversable.
+	if err := os.Chmod(work, 0755); err != nil {
+		t.Fatal(err)
+	}
 	for _, profile := range profiles {
 		config := fmt.Sprintf("global(workDirectory=\"%s\")\n%s", work, renderRsyslog(site, siteHash, profile, nil, "test-node"))
 		path := filepath.Join(work, profile.Name+".conf")
