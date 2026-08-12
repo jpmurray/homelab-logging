@@ -12,7 +12,7 @@ import (
 )
 
 var packageItems = []string{
-	"VERSION", "README.md", "CHANGELOG.md", "LICENSE", "config.json",
+	"VERSION", "README.md", "CHANGELOG.md", "LICENSE", "install.sh", "config.json",
 	"alloy", "docs", "grafana", "schema", "services",
 }
 
@@ -80,7 +80,7 @@ func addFile(archive *zip.Writer, source, target string) error {
 	}
 	header.Name = filepath.ToSlash(target)
 	header.Method = zip.Deflate
-	if filepath.Base(target) == "homelab-logging" {
+	if filepath.Base(target) == "homelab-logging" || filepath.Base(target) == "install.sh" {
 		header.SetMode(0755)
 	}
 	writer, err := archive.CreateHeader(header)

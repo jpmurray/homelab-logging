@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-08-12
+
+### Added
+
+- Node installer/updater that discovers the latest GitHub release, preserves the site configuration, validates the downloaded release, and supports version-pinned rollback.
+
+### Fixed
+
+- The CLI now resolves its executable symlink before looking for bundled profiles and configuration.
+
 ## [1.2.2] - 2026-08-12
 
 ### Fixed
@@ -53,7 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bash installer, shell libraries, shell test harness, and the runtime dependency on `jq`.
 
-[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.2.2...HEAD
+[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.2.3...HEAD
+[1.2.3]: https://github.com/jpmurray/homelab-logging/compare/1.2.2...1.2.3
 [1.2.2]: https://github.com/jpmurray/homelab-logging/compare/1.2.1...1.2.2
 [1.2.1]: https://github.com/jpmurray/homelab-logging/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/jpmurray/homelab-logging/compare/1.1.0...1.2.0

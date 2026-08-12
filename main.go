@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const version = "1.2.2"
+const version = "1.2.3"
 
 type options struct {
 	action      string
@@ -53,6 +53,9 @@ func defaultRoot() string {
 	}
 	executable, err := os.Executable()
 	if err == nil {
+		if resolved, resolveErr := filepath.EvalSymlinks(executable); resolveErr == nil {
+			executable = resolved
+		}
 		return filepath.Dir(executable)
 	}
 	return cwd

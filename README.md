@@ -80,26 +80,34 @@ Use `--config PATH` or `--profiles-dir PATH` to override the files beside the bi
 Create a GitHub release by updating `VERSION`, committing the change, and pushing a matching numeric tag:
 
 ```bash
-git tag 1.2.2
-git push origin 1.2.2
+git tag 1.2.3
+git push origin 1.2.3
 ```
 
-GitHub Actions tests the project and publishes `homelab-logging-1.2.2-linux-amd64.zip`. Download that archive from the repository's Releases page and copy it to each Proxmox node.
+GitHub Actions tests the project and publishes `homelab-logging-1.2.3-linux-amd64.zip`.
 
-On a node, keep releases under `/opt` and point `current` at the active one:
+On each Proxmox node, download and run the installer as root:
 
 ```bash
-mkdir -p /opt/homelab-logging/releases
-unzip homelab-logging-1.2.2-linux-amd64.zip -d /opt/homelab-logging/releases
-ln -sfn /opt/homelab-logging/releases/homelab-logging-1.2.2 /opt/homelab-logging/current
-ln -sfn /opt/homelab-logging/current/homelab-logging /usr/local/bin/homelab-logging
+curl -fsSLO https://raw.githubusercontent.com/jpmurray/homelab-logging/main/install.sh
+sudo bash install.sh
+```
 
+The installer finds the latest GitHub release, downloads its Linux AMD64 archive, validates it, and switches `/opt/homelab-logging/current` to the new release. It keeps the site configuration at `/opt/homelab-logging/config.json`, so updates do not replace local settings. Edit that file after the first install, then run:
+
+```bash
 homelab-logging --validate
 homelab-logging --sync --dry-run
 homelab-logging --sync
 ```
 
-To update, repeat those steps with the new release number. To roll back, point `current` at the previous release.
+To update to the latest release later:
+
+```bash
+sudo homelab-logging-update
+```
+
+Pass `--version 1.2.3` to install or roll back to a specific release. Previous releases remain under `/opt/homelab-logging/releases`.
 
 ## Profiles and detection
 
