@@ -303,7 +303,27 @@ func TestGeneratedConfigurationsAreAcceptedByRsyslog(t *testing.T) {
 	if base != "" {
 		workDirectory = "/var/spool/rsyslog"
 	}
+	imdockerAvailable := false
+	for _, pattern := range []string{
+		"/usr/lib/rsyslog/imdocker.so",
+		"/usr/lib/*/rsyslog/imdocker.so",
+		"/usr/local/lib/rsyslog/imdocker.so",
+		"/usr/local/lib/*/rsyslog/imdocker.so",
+	} {
+		matches, globErr := filepath.Glob(pattern)
+		if globErr != nil {
+			t.Fatal(globErr)
+		}
+		if len(matches) > 0 {
+			imdockerAvailable = true
+			break
+		}
+	}
 	for _, profile := range profiles {
+		if profile.Docker.Enabled && profile.Docker.mode() == "api" && !imdockerAvailable {
+			t.Logf("%s: skipping rsyslogd integration validation because imdocker is unavailable", profile.Name)
+			continue
+		}
 		runtime := dockerRuntime{}
 		if profile.Docker.Enabled && profile.Docker.mode() == "api" {
 			runtime.APIVersion = "1.52"

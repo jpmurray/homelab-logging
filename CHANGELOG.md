@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-12
+
+### Fixed
+
+- GitHub Actions no longer requires the Debian-only `rsyslog-docker` package on Ubuntu runners; Docker API rendering remains covered by unit tests, while `rsyslogd` integration validation runs when the module is available.
+
 ## [1.2.0] - 2026-08-12
 
 ### Added
@@ -41,7 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bash installer, shell libraries, shell test harness, and the runtime dependency on `jq`.
 
-[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.2.0...HEAD
+[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.2.1...HEAD
+[1.2.1]: https://github.com/jpmurray/homelab-logging/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/jpmurray/homelab-logging/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/jpmurray/homelab-logging/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/jpmurray/homelab-logging/releases/tag/1.0.0
