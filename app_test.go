@@ -204,7 +204,8 @@ func TestGeneratedConfigurationsAreAcceptedByRsyslog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	work, err := os.MkdirTemp("", "homelab-logging-rsyslog-*")
+	base := os.Getenv("HLL_RSYSLOG_TEST_DIR")
+	work, err := os.MkdirTemp(base, "homelab-logging-rsyslog-*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,8 +215,12 @@ func TestGeneratedConfigurationsAreAcceptedByRsyslog(t *testing.T) {
 	if err := os.Chmod(work, 0755); err != nil {
 		t.Fatal(err)
 	}
+	workDirectory := work
+	if base != "" {
+		workDirectory = "/var/spool/rsyslog"
+	}
 	for _, profile := range profiles {
-		config := fmt.Sprintf("global(workDirectory=\"%s\")\n%s", work, renderRsyslog(site, siteHash, profile, nil, "test-node"))
+		config := fmt.Sprintf("global(workDirectory=\"%s\")\n%s", workDirectory, renderRsyslog(site, siteHash, profile, nil, "test-node"))
 		path := filepath.Join(work, profile.Name+".conf")
 		if err := os.WriteFile(path, []byte(config), 0644); err != nil {
 			t.Fatal(err)

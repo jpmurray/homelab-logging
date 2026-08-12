@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Rsyslog syntax tests now use a traversable temporary directory so validation works with Ubuntu's unprivileged rsyslog process.
+- Rsyslog syntax tests now use an AppArmor-approved configuration path on Ubuntu CI runners.
 
 ### Removed
 
