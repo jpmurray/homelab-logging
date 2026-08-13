@@ -41,6 +41,10 @@ func TestRenderRsyslog(t *testing.T) {
 		"# homelab-logging-profile: docker",
 		"# homelab-logging-profile-revision: 2",
 		"homelab@32473 cluster=\\\"saint-cluster\\\" location=\\\"home\\\" role=\\\"lxc\\\" node=\\\"patate-du-cluster\\\" job=\\\"docker\\\"",
+		"load=\"imjournal\"",
+		"StateFile=\"homelab-logging-imjournal.state\"",
+		"IgnorePreviousMessages=\"on\"",
+		"input(type=\"imjournal\" Ruleset=\"alloy_journal\")",
 		"load=\"imdocker\"",
 		"ApiVersionStr=\"v1.52\"",
 		"PollingInterval=\"5\"",
@@ -52,6 +56,9 @@ func TestRenderRsyslog(t *testing.T) {
 		if !strings.Contains(config, wanted) {
 			t.Errorf("generated config is missing %q", wanted)
 		}
+	}
+	if strings.Contains(config, "# Forward messages received through the container syslog/journal path.") {
+		t.Fatal("generated configuration still relies on implicit journal-to-syslog forwarding")
 	}
 	legacy := profile
 	legacy.Docker = Docker{Enabled: true, Mode: "files"}

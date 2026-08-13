@@ -94,11 +94,11 @@ The first `--host` installation treats paths in `legacy_configs`, including `/et
 Create a GitHub release by updating `VERSION`, committing the change, and pushing a matching numeric tag:
 
 ```bash
-git tag 1.4.0
-git push origin 1.4.0
+git tag 1.4.1
+git push origin 1.4.1
 ```
 
-GitHub Actions tests the project and publishes `homelab-logging-1.4.0-linux-amd64.zip`.
+GitHub Actions tests the project and publishes `homelab-logging-1.4.1-linux-amd64.zip`.
 
 On each Proxmox node, download and run the installer as root:
 
@@ -123,7 +123,7 @@ To update to the latest release later:
 sudo homelab-logging-update
 ```
 
-Pass `--version 1.4.0` to install or roll back to a specific release. Previous releases remain under `/opt/homelab-logging/releases`.
+Pass `--version 1.4.1` to install or roll back to a specific release. Previous releases remain under `/opt/homelab-logging/releases`.
 
 ## Profiles and detection
 

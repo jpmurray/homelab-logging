@@ -10,7 +10,7 @@ selected task logs ─────┤
 Docker API ─────────────┘
 ```
 
-Rsyslog is the only transport on a managed host or inside a target LXC. File and task inputs use dedicated rulesets ending in `stop` so they do not fall through into journal forwarding. Disk-assisted queues retry indefinitely, and rsyslog owns source offsets. New file inputs begin at the tail.
+Rsyslog is the only transport on a managed host or inside a target LXC. Journal-enabled profiles read systemd-journald explicitly through `imjournal` instead of relying on the distribution's optional `ForwardToSyslog` bridge. File and task inputs use dedicated rulesets ending in `stop`. Disk-assisted queues retry indefinitely, and rsyslog owns source offsets. New journal and file inputs begin at the tail.
 
 ## Program structure
 

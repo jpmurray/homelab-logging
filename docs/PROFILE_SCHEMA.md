@@ -10,7 +10,7 @@ Every profile contains:
 | `profile_revision` | Positive integer incremented whenever this profile changes. |
 | `name` | Stable profile and filename identifier. |
 | `description` | Human-readable summary. |
-| `journal` | Forward the target's normal rsyslog/journal stream. |
+| `journal` | Read the target's systemd journal directly through rsyslog `imjournal`. |
 | `required_paths` | Paths that must exist before installation. |
 | `files` | Regular file/glob inputs. |
 | `tasks` | File/glob inputs that may prepend the source filename. |

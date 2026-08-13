@@ -31,6 +31,9 @@ func renderRsyslog(site SiteConfig, siteHash string, profile Profile, docker doc
 	if hasFiles || hasDockerFiles {
 		b.WriteString("module(load=\"imfile\" PollingInterval=\"10\")\n\n")
 	}
+	if profile.Journal {
+		emitJournalModule(&b)
+	}
 	if hasDockerAPI {
 		emitDockerAPIModule(&b, profile.Docker, docker.APIVersion)
 	}
@@ -50,6 +53,9 @@ func renderRsyslog(site SiteConfig, siteHash string, profile Profile, docker doc
 	}
 	if hasFiles {
 		emitRuleset(&b, "alloy_files", site, "AlloySyslogForward", "alloy-files")
+	}
+	if profile.Journal {
+		emitRuleset(&b, "alloy_journal", site, "AlloySyslogForward", "alloy-journal")
 	}
 	if hasTaskMetadata {
 		emitTaskRuleset(&b, site)
@@ -80,10 +86,21 @@ func renderRsyslog(site SiteConfig, siteHash string, profile Profile, docker doc
 		emitInput(&b, Source{Path: source.Path, Service: source.Service, Facility: "local6", Severity: "info"}, "alloy_docker", false)
 	}
 	if profile.Journal {
-		b.WriteString("# Forward messages received through the container syslog/journal path.\n")
-		emitForwardAction(&b, site, "AlloySyslogForward", "alloy-journal")
+		b.WriteString("# Read the systemd journal directly instead of relying on ForwardToSyslog.\n")
+		b.WriteString("input(type=\"imjournal\" Ruleset=\"alloy_journal\")\n")
 	}
 	return b.String()
+}
+
+func emitJournalModule(b *strings.Builder) {
+	b.WriteString(`module(
+    load="imjournal"
+    StateFile="homelab-logging-imjournal.state"
+    PersistStateInterval="100"
+    IgnorePreviousMessages="on"
+)
+
+`)
 }
 
 func emitDockerAPIModule(b *strings.Builder, docker Docker, apiVersion string) {
