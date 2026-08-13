@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "profile_revision": 1,
+  "profile_revision": 2,
   "name": "beszel",
-  "description": "Beszel hub or agent journal logging",
+  "description": "Beszel hub journal logging",
   "journal": true,
   "required_paths": [],
   "files": [],
@@ -13,10 +13,9 @@
     "priority": 60,
     "probes": [
       {"type": "service", "value": "beszel.service"},
-      {"type": "service", "value": "beszel-hub.service"},
-      {"type": "service", "value": "beszel-agent.service"}
+      {"type": "service", "value": "beszel-hub.service"}
     ]
   },
   "test_service": "beszel-test",
-  "notes": ["Journal only; supports Beszel hub and agent systemd units."]
+  "notes": ["Journal only; agent units are intentionally excluded from detection because they are installed across application containers."]
 }

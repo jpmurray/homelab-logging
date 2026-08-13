@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "tautulli",
+  "description": "Tautulli journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "tautulli.service"}]},
+  "test_service": "tautulli-test",
+  "notes": ["Journal only."]
+}

@@ -1,14 +1,18 @@
 {
   "schema_version": 1,
-  "profile_revision": 1,
+  "profile_revision": 2,
   "name": "vito",
-  "description": "Vito journal logging",
+  "description": "Vito journal, Laravel, and worker logging",
   "journal": true,
-  "required_paths": [],
-  "files": [],
-  "tasks": [],
+  "required_paths": ["/home/vito/vito"],
+  "files": [
+    {"path": "/home/vito/vito/storage/logs/laravel.log", "service": "vito", "required": false}
+  ],
+  "tasks": [
+    {"path": "/home/vito/.logs/workers/*.log", "service": "vito-worker", "required": false, "include_filename": true}
+  ],
   "docker": {"enabled": false},
-  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "vito.service"}]},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "path", "value": "/home/vito/vito/artisan"}]},
   "test_service": "vito-test",
-  "notes": ["Journal only for v1."]
+  "notes": ["Collects Laravel application output plus Supervisor-managed Horizon and WebSocket logs; worker filenames are preserved in each message."]
 }

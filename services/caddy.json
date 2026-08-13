@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "caddy",
+  "description": "Caddy journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "caddy.service"}, {"type": "service", "value": "caddy-api.service"}]},
+  "test_service": "caddy-test",
+  "notes": ["Journal only; configure Caddy access logs separately if request-level logging is required."]
+}

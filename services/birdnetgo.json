@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "profile_revision": 1,
+  "profile_revision": 2,
   "name": "birdnetgo",
   "description": "BirdNET-Go journal logging",
   "journal": true,
@@ -8,7 +8,7 @@
   "files": [],
   "tasks": [],
   "docker": {"enabled": false},
-  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "birdnet-go.service"}, {"type": "service", "value": "birdnetgo.service"}]},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "birdnet.service"}, {"type": "service", "value": "birdnet-go.service"}, {"type": "service", "value": "birdnetgo.service"}]},
   "test_service": "birdnetgo-test",
-  "notes": ["Journal only for v1."]
+  "notes": ["Journal only."]
 }

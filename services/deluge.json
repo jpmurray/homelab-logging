@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "deluge",
+  "description": "Deluge journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 60,
+    "probes": [
+      {"type": "service", "value": "deluged.service"},
+      {"type": "service", "value": "deluge-web.service"},
+      {"type": "package", "value": "deluged"}
+    ]
+  },
+  "test_service": "deluge-test",
+  "notes": ["Journal only."]
+}

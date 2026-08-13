@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "seerr",
+  "description": "Seerr journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 60,
+    "probes": [
+      {"type": "service", "value": "seerr.service"},
+      {"type": "service", "value": "jellyseerr.service"},
+      {"type": "service", "value": "overseerr.service"}
+    ]
+  },
+  "test_service": "seerr-test",
+  "notes": ["Journal only; legacy Jellyseerr and Overseerr unit names are included for detection."]
+}

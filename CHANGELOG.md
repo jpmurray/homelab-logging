@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-12
+
+### Added
+
+- Service profiles for Authentik, BookOrbit, Caddy, Deluge, Profilarr, Seerr, Tautulli, Transmission, and Wizarr.
+- Vito application collection for Laravel, Horizon worker, and WebSocket logs.
+
+### Changed
+
+- Service detection now reflects observed saint-cluster units for BirdNET-Go, Syncthing, and UniFi OS.
+- Beszel auto-detection now targets the hub only, preventing the widely deployed agent unit from claiming unrelated application containers.
+
 ## [1.2.3] - 2026-08-12
 
 ### Added
@@ -63,7 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bash installer, shell libraries, shell test harness, and the runtime dependency on `jq`.
 
-[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.2.3...HEAD
+[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.3.0...HEAD
+[1.3.0]: https://github.com/jpmurray/homelab-logging/compare/1.2.3...1.3.0
 [1.2.3]: https://github.com/jpmurray/homelab-logging/compare/1.2.2...1.2.3
 [1.2.2]: https://github.com/jpmurray/homelab-logging/compare/1.2.1...1.2.2
 [1.2.1]: https://github.com/jpmurray/homelab-logging/compare/1.2.0...1.2.1

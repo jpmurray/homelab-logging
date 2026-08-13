@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "profile_revision": 1,
+  "profile_revision": 2,
   "name": "syncthing",
   "description": "Syncthing journal logging",
   "journal": true,
@@ -8,7 +8,7 @@
   "files": [],
   "tasks": [],
   "docker": {"enabled": false},
-  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "command", "value": "syncthing"}, {"type": "package", "value": "syncthing"}]},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "syncthing@.service"}, {"type": "command", "value": "syncthing"}, {"type": "package", "value": "syncthing"}]},
   "test_service": "syncthing-test",
-  "notes": ["Journal only for v1."]
+  "notes": ["Journal only."]
 }

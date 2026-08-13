@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "wizarr",
+  "description": "Wizarr journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "wizarr.service"}]},
+  "test_service": "wizarr-test",
+  "notes": ["Journal only."]
+}

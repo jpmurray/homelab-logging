@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "bookorbit",
+  "description": "BookOrbit journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {"mode": "any", "priority": 60, "probes": [{"type": "service", "value": "bookorbit.service"}]},
+  "test_service": "bookorbit-test",
+  "notes": ["Journal only."]
+}

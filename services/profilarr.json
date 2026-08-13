@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "profilarr",
+  "description": "Profilarr Docker and journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": true, "mode": "api", "polling_interval": 5},
+  "detect": {
+    "mode": "any",
+    "priority": 60,
+    "probes": [{"type": "path", "value": "/root/config/data/profilarr.db"}]
+  },
+  "test_service": "profilarr-test",
+  "notes": ["Collects the Profilarr container through the Docker API; the container must be running for application logs to be followed."]
+}

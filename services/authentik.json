@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "authentik",
+  "description": "Authentik journal logging",
+  "journal": true,
+  "required_paths": [],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 60,
+    "probes": [
+      {"type": "service", "value": "authentik.service"},
+      {"type": "service", "value": "authentik-server.service"},
+      {"type": "service", "value": "authentik-worker.service"}
+    ]
+  },
+  "test_service": "authentik-test",
+  "notes": ["Journal only; use the Docker profile instead when Authentik runs in containers."]
+}

@@ -22,8 +22,8 @@ func TestRepositoryConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(profiles) != 22 {
-		t.Fatalf("got %d profiles, want 22", len(profiles))
+	if len(profiles) != 31 {
+		t.Fatalf("got %d profiles, want 31", len(profiles))
 	}
 }
 
@@ -119,6 +119,30 @@ func TestDockerProfileValidation(t *testing.T) {
 	}
 	if legacy.Docker.mode() != "files" {
 		t.Fatalf("legacy mode resolved to %q, want files", legacy.Docker.mode())
+	}
+}
+
+func TestVitoProfilePreservesWorkerFilename(t *testing.T) {
+	site, siteHash, err := loadSite("config.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile, err := loadProfile("services/vito.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config := renderRsyslog(site, siteHash, profile, dockerRuntime{}, "test-node")
+	for _, wanted := range []string{
+		`File="/home/vito/vito/storage/logs/laravel.log"`,
+		`File="/home/vito/.logs/workers/*.log"`,
+		`addMetadata="on"`,
+		`Ruleset="alloy_tasks"`,
+		`property(name="$.task_id")`,
+	} {
+		if !strings.Contains(config, wanted) {
+			t.Errorf("generated Vito configuration is missing %q", wanted)
+		}
 	}
 }
 
