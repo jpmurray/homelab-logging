@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-08-12
+
+### Added
+
+- Native Proxmox VE host installation, status, inventory, and synchronization through the new `--host` target.
+- A `pve-host` profile that preserves journal, API access, and task-log collection from the legacy host configuration.
+
+### Changed
+
+- Host forwarding now uses the same structured metadata, revision tracking, atomic deployment, validation, rollback, and legacy-file migration used for LXCs while retaining `role=proxmox-host` compatibility.
+
 ## [1.3.0] - 2026-08-12
 
 ### Added
@@ -75,7 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bash installer, shell libraries, shell test harness, and the runtime dependency on `jq`.
 
-[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.3.0...HEAD
+[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.4.0...HEAD
+[1.4.0]: https://github.com/jpmurray/homelab-logging/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/jpmurray/homelab-logging/compare/1.2.3...1.3.0
 [1.2.3]: https://github.com/jpmurray/homelab-logging/compare/1.2.2...1.2.3
 [1.2.2]: https://github.com/jpmurray/homelab-logging/compare/1.2.1...1.2.2

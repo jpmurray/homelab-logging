@@ -1,14 +1,15 @@
 # homelab-logging
 
-A small Go CLI for forwarding Proxmox LXC logs to Grafana Alloy over RFC5424 syslog. The same binary and profiles run on each Proxmox node; service behavior lives in JSON profiles and site-specific values live in `config.json`.
+A small Go CLI for forwarding Proxmox VE host and LXC logs to Grafana Alloy over RFC5424 syslog. The same binary and profiles run on each Proxmox node; service behavior lives in JSON profiles and site-specific values live in `config.json`.
 
-This is intentionally a personal homelab tool. It uses the Go standard library, calls the local `pct` command, and keeps its state in the generated rsyslog file inside each managed LXC.
+This is intentionally a personal homelab tool. It uses the Go standard library, calls the local `pct` command for containers, and keeps its state in the generated rsyslog file on each managed target.
 
 ## What it does
 
 - Validates the site configuration and all service profiles.
+- Installs, audits, inventories, and synchronizes logging on the local Proxmox VE host.
 - Auto-detects profiles from paths, systemd services, commands, and packages.
-- Installs rsyslog in a target LXC when necessary.
+- Installs rsyslog on a target host or LXC when necessary.
 - Generates deterministic rsyslog configuration.
 - Backs up the existing managed configuration.
 - Disables only explicitly configured legacy forwarding files.
@@ -21,7 +22,7 @@ This is intentionally a personal homelab tool. It uses the Go standard library, 
 
 ## Requirements
 
-The binary runs as root on a Proxmox VE host. The host needs `pct`. Target containers must be Debian-family systemd containers with APT; rsyslog is installed automatically when absent.
+The binary runs on a Proxmox VE host. LXC operations need `pct`. Write operations run as root; rsyslog is installed automatically when absent on both the host and Debian-family systemd containers.
 
 Building from source requires Go 1.24 or newer:
 
@@ -29,7 +30,7 @@ Building from source requires Go 1.24 or newer:
 make build
 ```
 
-Before deploying LXCs, install `alloy/config.alloy` on the collector or merge the syslog contract from `alloy/syslog-labels.alloy`.
+Before deploying hosts or LXCs, install `alloy/config.alloy` on the collector or merge the syslog contract from `alloy/syslog-labels.alloy`.
 
 ## Site configuration
 
@@ -53,7 +54,7 @@ Edit `config.json` once for the site:
 }
 ```
 
-The Proxmox node label comes from the host's short hostname. `cluster` and `location` remain site-wide values.
+The Proxmox node label comes from the host's short hostname. `cluster` and `location` remain site-wide values. `origin_role` applies to LXCs; native host operations always emit `role=proxmox-host` to preserve the existing Alloy label contract.
 
 ## Usage
 
@@ -67,6 +68,13 @@ The Proxmox node label comes from the host's short hostname. `cluster` and `loca
 ./homelab-logging 105 --status
 ./homelab-logging 105 --migrate
 
+./homelab-logging --host --dry-run
+./homelab-logging --host
+./homelab-logging --host --status
+./homelab-logging --host --inventory
+./homelab-logging --host --sync --dry-run
+./homelab-logging --host --sync
+
 ./homelab-logging --inventory
 ./homelab-logging --sync postgres --dry-run
 ./homelab-logging --sync postgres
@@ -75,16 +83,22 @@ The Proxmox node label comes from the host's short hostname. `cluster` and `loca
 
 Use `--config PATH` or `--profiles-dir PATH` to override the files beside the binary.
 
+## Proxmox host logging
+
+The `pve-host` profile preserves the existing Saint-Cluster host sources: the normal journal/syslog stream, `/var/log/pveproxy/access.log`, and all `/var/log/pve/tasks/*/UPID:*` task logs. Task UPIDs remain in message bodies instead of becoming Loki labels.
+
+The first `--host` installation treats paths in `legacy_configs`, including `/etc/rsyslog.d/90-alloy.conf`, as legacy forwarding. It preserves and disables the legacy file, validates the complete replacement configuration, and rolls back on failure. Subsequent releases are reconciled with `--host --sync`.
+
 ## Deployment
 
 Create a GitHub release by updating `VERSION`, committing the change, and pushing a matching numeric tag:
 
 ```bash
-git tag 1.2.3
-git push origin 1.2.3
+git tag 1.4.0
+git push origin 1.4.0
 ```
 
-GitHub Actions tests the project and publishes `homelab-logging-1.2.3-linux-amd64.zip`.
+GitHub Actions tests the project and publishes `homelab-logging-1.4.0-linux-amd64.zip`.
 
 On each Proxmox node, download and run the installer as root:
 
@@ -97,6 +111,8 @@ The installer finds the latest GitHub release, downloads its Linux AMD64 archive
 
 ```bash
 homelab-logging --validate
+homelab-logging --host --dry-run
+homelab-logging --host
 homelab-logging --sync --dry-run
 homelab-logging --sync
 ```
@@ -107,7 +123,7 @@ To update to the latest release later:
 sudo homelab-logging-update
 ```
 
-Pass `--version 1.2.3` to install or roll back to a specific release. Previous releases remain under `/opt/homelab-logging/releases`.
+Pass `--version 1.4.0` to install or roll back to a specific release. Previous releases remain under `/opt/homelab-logging/releases`.
 
 ## Profiles and detection
 
@@ -119,9 +135,9 @@ Each profile has a monotonically increasing `profile_revision`. The generated fi
 
 ## Deployment and rollback
 
-A write operation:
+A host or LXC write operation:
 
-1. verifies the CT exists and is running;
+1. verifies the target is available;
 2. checks required paths and sources;
 3. installs rsyslog and any profile-required input plugin when absent;
 4. generates the candidate;

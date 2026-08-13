@@ -8,24 +8,31 @@ import (
 	"strings"
 )
 
-const version = "1.3.0"
+const version = "1.4.0"
+
+const hostTargetID = 1
 
 type options struct {
 	action      string
 	configPath  string
 	profilesDir string
 	dryRun      bool
+	host        bool
 	ctid        int
 	profile     string
 }
 
 func usage() {
-	fmt.Print(`homelab-logging - deploy declarative rsyslog forwarding into Proxmox LXCs
+	fmt.Print(`homelab-logging - deploy declarative rsyslog forwarding on Proxmox hosts and LXCs
 
 Usage:
   homelab-logging <CTID> [PROFILE] [--dry-run]
   homelab-logging <CTID> [PROFILE] --status
   homelab-logging <CTID> --migrate [--dry-run]
+  homelab-logging --host [PROFILE] [--dry-run]
+  homelab-logging --host [PROFILE] --status
+  homelab-logging --host --inventory
+  homelab-logging --host --sync [PROFILE] [--dry-run]
   homelab-logging --inventory [PROFILE]
   homelab-logging --sync [PROFILE] [--dry-run]
   homelab-logging --list
@@ -34,11 +41,12 @@ Usage:
 Options:
   --config PATH         Site configuration (default: ./config.json)
   --profiles-dir PATH   Profile directory (default: ./services)
-  --dry-run             Generate and display changes without modifying the LXC
+  --host                Manage logging on the local Proxmox VE host
+  --dry-run             Generate and display changes without modifying the target
   --status              Audit installation, service, destination, and sources
   --migrate             Refresh an installed profile after moving an LXC
   --inventory           Show installed and available profile revisions
-  --sync                Reconcile previously managed LXCs
+  --sync                Reconcile previously managed targets
   --list                List available profiles
   --validate            Validate site configuration and profiles
   --version             Print the version
@@ -79,6 +87,9 @@ func parseOptions(args []string) (options, error) {
 			i += 2
 		case "--dry-run":
 			opts.dryRun = true
+			i++
+		case "--host":
+			opts.host = true
 			i++
 		case "--status":
 			opts.action = "status"
@@ -178,6 +189,45 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	if opts.action == "list" {
+		application := newApp(site, siteHash, profiles, nil, node, os.Stdout, os.Stderr)
+		application.listProfiles()
+		return nil
+	}
+	if opts.host {
+		if opts.ctid != 0 {
+			return fmt.Errorf("--host does not accept a CTID")
+		}
+		if opts.action == "migrate" {
+			return fmt.Errorf("--migrate applies only to LXCs; host labels always use the local node name")
+		}
+		if !opts.dryRun && contains([]string{"install", "sync"}, opts.action) && os.Geteuid() != 0 && os.Getenv("HLL_TESTING") != "1" {
+			return fmt.Errorf("run this command as root on a Proxmox VE host")
+		}
+		hostSite := site
+		hostSite.OriginRole = "proxmox-host"
+		hostSiteHash := hashBytes([]byte(siteHash + "\norigin_role=proxmox-host"))
+		application := newApp(hostSite, hostSiteHash, profiles, newLocalClient(), node, os.Stdout, os.Stderr)
+		application.dryRun = opts.dryRun
+		application.host = true
+		switch opts.action {
+		case "inventory":
+			if opts.dryRun {
+				return fmt.Errorf("--dry-run is only valid with --sync")
+			}
+			return application.reconcile("inventory", opts.profile)
+		case "sync":
+			return application.reconcile("sync", opts.profile)
+		case "status":
+			return application.status(hostTargetID, opts.profile)
+		case "install":
+			_, err := application.install(hostTargetID, opts.profile)
+			return err
+		default:
+			return fmt.Errorf("action %q is not valid with --host", opts.action)
+		}
+	}
+
 	pctBinary := os.Getenv("PCT_BIN")
 	if pctBinary == "" {
 		pctBinary = "pct"
@@ -185,11 +235,6 @@ func run(args []string) error {
 	client := newPCTClient(pctBinary)
 	application := newApp(site, siteHash, profiles, client, node, os.Stdout, os.Stderr)
 	application.dryRun = opts.dryRun
-
-	if opts.action == "list" {
-		application.listProfiles()
-		return nil
-	}
 	if err := requirePCT(pctBinary); err != nil {
 		return err
 	}

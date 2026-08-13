@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "pve-host",
+  "description": "Proxmox VE host journal, API access, and task logging",
+  "journal": true,
+  "required_paths": ["/var/log/pve", "/var/log/pveproxy"],
+  "files": [
+    {"path": "/var/log/pveproxy/access.log", "service": "pveproxy-access", "required": false}
+  ],
+  "tasks": [
+    {"path": "/var/log/pve/tasks/*/UPID:*", "service": "pve-task", "required": false, "include_filename": true}
+  ],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 100,
+    "probes": [
+      {"type": "service", "value": "pveproxy.service"},
+      {"type": "service", "value": "pvedaemon.service"},
+      {"type": "path", "value": "/var/log/pve/tasks"}
+    ]
+  },
+  "test_service": "pve-host-test",
+  "notes": [
+    "Preserves the legacy host sources: the complete journal/syslog stream, pveproxy access log, and all Proxmox task logs.",
+    "Task UPIDs remain in message bodies instead of becoming Loki labels."
+  ]
+}

@@ -26,6 +26,7 @@ type app struct {
 	out           io.Writer
 	errOut        io.Writer
 	dryRun        bool
+	host          bool
 }
 
 func newApp(site SiteConfig, siteHash string, profiles []Profile, pct containerClient, node string, out, errOut io.Writer) *app {
@@ -44,6 +45,13 @@ func (a *app) warn(format string, args ...any) {
 	fmt.Fprintf(a.errOut, "WARNING: "+format+"\n", args...)
 }
 
+func (a *app) target(ctid int) string {
+	if a.host {
+		return "Proxmox host " + a.node
+	}
+	return fmt.Sprintf("CT %d", ctid)
+}
+
 func (a *app) profile(name string) (Profile, error) {
 	profile, ok := a.profileByName[name]
 	if !ok {
@@ -58,10 +66,10 @@ func (a *app) verifyContainer(ctid int) error {
 	}
 	status, err := a.pct.Status(ctid)
 	if err != nil {
-		return fmt.Errorf("container %d does not exist: %w", ctid, err)
+		return fmt.Errorf("%s is unavailable: %w", a.target(ctid), err)
 	}
 	if status != "running" {
-		return fmt.Errorf("container %d is not running (status: %s)", ctid, status)
+		return fmt.Errorf("%s is not running (status: %s)", a.target(ctid), status)
 	}
 	return nil
 }
@@ -168,7 +176,7 @@ func (a *app) detectProfile(ctid int) (Profile, error) {
 		}
 	}
 	if len(best) == 0 {
-		return Profile{}, fmt.Errorf("no profile matched CT %d; specify one explicitly", ctid)
+		return Profile{}, fmt.Errorf("no profile matched %s; specify one explicitly", a.target(ctid))
 	}
 	if len(best) > 1 {
 		names := make([]string, len(best))
@@ -187,11 +195,11 @@ func (a *app) dockerRuntime(ctid int, profile Profile) (dockerRuntime, error) {
 	if profile.Docker.mode() == "api" {
 		output, err := a.pct.Exec(ctid, "docker", "version", "--format", "{{.Server.APIVersion}}")
 		if err != nil {
-			return dockerRuntime{}, fmt.Errorf("discover Docker API version in CT %d: %w", ctid, err)
+			return dockerRuntime{}, fmt.Errorf("discover Docker API version in %s: %w", a.target(ctid), err)
 		}
 		apiVersion := strings.TrimSpace(output)
 		if !dockerAPIVersionPattern.MatchString(apiVersion) {
-			return dockerRuntime{}, fmt.Errorf("Docker returned invalid API version %q in CT %d", apiVersion, ctid)
+			return dockerRuntime{}, fmt.Errorf("Docker returned invalid API version %q in %s", apiVersion, a.target(ctid))
 		}
 		return dockerRuntime{APIVersion: apiVersion}, nil
 	}
@@ -231,12 +239,12 @@ func (a *app) checkRequired(ctid int, profile Profile) error {
 	var failures []string
 	for _, path := range profile.RequiredPaths {
 		if _, err := a.pct.Exec(ctid, "test", "-e", path); err != nil {
-			failures = append(failures, fmt.Sprintf("missing required path in CT %d: %s", ctid, path))
+			failures = append(failures, fmt.Sprintf("missing required path in %s: %s", a.target(ctid), path))
 		}
 	}
 	for _, source := range append(append([]Source{}, profile.Files...), profile.Tasks...) {
 		if source.Required && !a.patternExists(ctid, source.Path) {
-			failures = append(failures, fmt.Sprintf("required log source has no matches in CT %d: %s", ctid, source.Path))
+			failures = append(failures, fmt.Sprintf("required log source has no matches in %s: %s", a.target(ctid), source.Path))
 		}
 	}
 	if len(failures) > 0 {
@@ -273,7 +281,7 @@ func (a *app) ensureRsyslog(ctid int, profile Profile) error {
 	if len(missing) == 0 {
 		return nil
 	}
-	a.info("Installing %s in CT %d", strings.Join(missing, " and "), ctid)
+	a.info("Installing %s in %s", strings.Join(missing, " and "), a.target(ctid))
 	if _, err := a.pct.Exec(ctid, "apt-get", "update"); err != nil {
 		return err
 	}
@@ -289,7 +297,11 @@ type deploymentResult struct {
 }
 
 func (a *app) deploy(ctid int, profile Profile, generated []byte) (result deploymentResult, err error) {
-	lockPath, err := acquireLock(ctid)
+	lockKey := strconv.Itoa(ctid)
+	if a.host {
+		lockKey = "host-" + a.node
+	}
+	lockPath, err := acquireLock(lockKey, a.target(ctid))
 	if err != nil {
 		return result, err
 	}
@@ -334,7 +346,7 @@ func (a *app) deploy(ctid int, profile Profile, generated []byte) (result deploy
 	type movedFile struct{ original, disabled string }
 	var moved []movedFile
 	rollback := func() {
-		a.warn("Rolling back rsyslog configuration in CT %d", ctid)
+		a.warn("Rolling back rsyslog configuration on %s", a.target(ctid))
 		if currentExists {
 			_, _ = a.pct.Exec(ctid, "cp", backup, a.site.RemoteConfig)
 		} else {
@@ -393,20 +405,20 @@ func (a *app) deploy(ctid int, profile Profile, generated []byte) (result deploy
 	}
 	committed = true
 	_, _ = a.pct.Exec(ctid, "logger", "-t", profile.TestService, fmt.Sprintf("homelab-logging v%s forwarding test for profile %s", version, profile.Name))
-	a.info("Installed profile %s in CT %d", profile.Name, ctid)
+	a.info("Installed profile %s on %s", profile.Name, a.target(ctid))
 	host, _ := a.pct.Exec(ctid, "hostname")
 	fmt.Fprintf(a.out, "Suggested LogQL: {cluster=\"%s\", host=\"%s\"}\n", a.site.Cluster, strings.TrimSpace(host))
 	return result, nil
 }
 
-func acquireLock(ctid int) (string, error) {
+func acquireLock(key, target string) (string, error) {
 	root := "/run/lock"
 	if os.Getenv("HLL_TESTING") == "1" {
 		root = os.TempDir()
 	}
-	path := filepath.Join(root, fmt.Sprintf("homelab-logging-%d.lock", ctid))
+	path := filepath.Join(root, "homelab-logging-"+key+".lock")
 	if err := os.Mkdir(path, 0755); err != nil {
-		return "", fmt.Errorf("another homelab-logging operation is active for CT %d", ctid)
+		return "", fmt.Errorf("another homelab-logging operation is active for %s", target)
 	}
 	return path, nil
 }
@@ -415,7 +427,7 @@ func (a *app) resolveProfile(ctid int, name string) (Profile, error) {
 	if name != "" {
 		return a.profile(name)
 	}
-	a.info("Detecting profile for CT %d", ctid)
+	a.info("Detecting profile for %s", a.target(ctid))
 	profile, err := a.detectProfile(ctid)
 	if err != nil {
 		return Profile{}, err
@@ -441,7 +453,7 @@ func (a *app) install(ctid int, profileName string) (deploymentResult, error) {
 		return deploymentResult{}, err
 	}
 	if a.dryRun {
-		fmt.Fprintf(a.out, "Dry run for CT %d using profile %s\n", ctid, profile.Name)
+		fmt.Fprintf(a.out, "Dry run for %s using profile %s\n", a.target(ctid), profile.Name)
 		fmt.Fprintf(a.out, "Would install rsyslog if absent, back up %s, validate, restart, and send a test message.\n", a.site.RemoteConfig)
 		for _, legacy := range a.activeLegacy(ctid) {
 			fmt.Fprintf(a.out, "Would back up and deactivate legacy configuration: %s\n", legacy)
@@ -501,7 +513,7 @@ func (a *app) status(ctid int, profileName string) error {
 	}
 	generated := []byte(renderRsyslog(a.site, a.siteHash, profile, docker, a.node))
 	host, _ := a.pct.Exec(ctid, "hostname")
-	fmt.Fprintf(a.out, "Audit for CT %d (%s)\n%s\n", ctid, strings.TrimSpace(host), strings.Repeat("-", 64))
+	fmt.Fprintf(a.out, "Audit for %s (%s)\n%s\n", a.target(ctid), strings.TrimSpace(host), strings.Repeat("-", 64))
 	problems := 0
 	check := func(ok bool, good, bad string) {
 		if ok {
@@ -537,12 +549,20 @@ func (a *app) status(ctid int, profileName string) error {
 		if actualRevision == expectedRevision {
 			fmt.Fprintf(a.out, "[ok]   installed profile revision: %s\n", actualRevision)
 		} else if actualRevision == "" && profile.ProfileRevision == 1 {
-			fmt.Fprintf(a.out, "[warn] installed profile revision: 1 (legacy marker inferred; run --sync %s)\n", profile.Name)
+			syncCommand := "--sync " + profile.Name
+			if a.host {
+				syncCommand = "--host --sync " + profile.Name
+			}
+			fmt.Fprintf(a.out, "[warn] installed profile revision: 1 (legacy marker inferred; run %s)\n", syncCommand)
 		} else {
 			fmt.Fprintf(a.out, "[fail] installed profile revision is %s; available revision is %s\n", defaultString(actualRevision, "missing"), expectedRevision)
 			problems++
 		}
-		check(actualNode == a.node, "Proxmox node label: "+actualNode, fmt.Sprintf("Proxmox node label is %s; current node is %s (run --migrate)", defaultString(actualNode, "missing"), a.node))
+		refreshCommand := "--migrate"
+		if a.host {
+			refreshCommand = "--host --sync"
+		}
+		check(actualNode == a.node, "Proxmox node label: "+actualNode, fmt.Sprintf("Proxmox node label is %s; current node is %s (run %s)", defaultString(actualNode, "missing"), a.node, refreshCommand))
 		check(bytes.Equal(data, generated), "deployed configuration matches generated configuration", "deployed configuration has drifted")
 	} else {
 		fmt.Fprintf(a.out, "[fail] managed configuration is not installed: %s\n", a.site.RemoteConfig)
@@ -628,7 +648,11 @@ func (a *app) reconcile(mode, filter string) error {
 	}
 	managed, current, updated, previewed, failed, deferred, legacy := 0, 0, 0, 0, 0, 0, 0
 	if mode == "inventory" {
-		fmt.Fprintf(a.out, "%-7s %-20s %-12s %-12s %s\n%s\n", "CTID", "PROFILE", "INSTALLED", "AVAILABLE", "RESULT", strings.Repeat("-", 64))
+		if a.host {
+			fmt.Fprintf(a.out, "%-24s %-20s %-12s %-12s %s\n%s\n", "TARGET", "PROFILE", "INSTALLED", "AVAILABLE", "RESULT", strings.Repeat("-", 80))
+		} else {
+			fmt.Fprintf(a.out, "%-7s %-20s %-12s %-12s %s\n%s\n", "CTID", "PROFILE", "INSTALLED", "AVAILABLE", "RESULT", strings.Repeat("-", 64))
+		}
 	}
 	for _, container := range containers {
 		if container.Status != "running" {
@@ -641,7 +665,13 @@ func (a *app) reconcile(mode, filter string) error {
 			continue
 		}
 		metadata, metadataErr := a.installedMetadata(container.ID)
-		if metadataErr != nil || metadata["profile"] == "" || filter != "" && metadata["profile"] != filter {
+		if metadataErr != nil || metadata["profile"] == "" {
+			if a.host && mode == "inventory" {
+				fmt.Fprintf(a.out, "%-24s %-20s %-12s %-12s %s\n", container.Name, "unmanaged", "-", "-", "not managed; run --host")
+			}
+			continue
+		}
+		if filter != "" && metadata["profile"] != filter {
 			continue
 		}
 		managed++
@@ -649,9 +679,13 @@ func (a *app) reconcile(mode, filter string) error {
 		if !ok {
 			failed++
 			if mode == "inventory" {
-				fmt.Fprintf(a.out, "%-7d %-20s %-12s %-12s %s\n", container.ID, metadata["profile"], defaultString(metadata["revision"], "unknown"), "unknown", "local profile missing or invalid")
+				if a.host {
+					fmt.Fprintf(a.out, "%-24s %-20s %-12s %-12s %s\n", container.Name, metadata["profile"], defaultString(metadata["revision"], "unknown"), "unknown", "local profile missing or invalid")
+				} else {
+					fmt.Fprintf(a.out, "%-7d %-20s %-12s %-12s %s\n", container.ID, metadata["profile"], defaultString(metadata["revision"], "unknown"), "unknown", "local profile missing or invalid")
+				}
 			} else {
-				a.warn("CT %d references unavailable profile %q", container.ID, metadata["profile"])
+				a.warn("%s references unavailable profile %q", a.target(container.ID), metadata["profile"])
 			}
 			continue
 		}
@@ -686,10 +720,14 @@ func (a *app) reconcile(mode, filter string) error {
 			current++
 		}
 		if mode == "inventory" {
-			fmt.Fprintf(a.out, "%-7d %-20s %-12s %-12d %s\n", container.ID, profile.Name, revisionLabel, profile.ProfileRevision, result)
+			if a.host {
+				fmt.Fprintf(a.out, "%-24s %-20s %-12s %-12d %s\n", container.Name, profile.Name, revisionLabel, profile.ProfileRevision, result)
+			} else {
+				fmt.Fprintf(a.out, "%-7d %-20s %-12s %-12d %s\n", container.ID, profile.Name, revisionLabel, profile.ProfileRevision, result)
+			}
 			continue
 		}
-		a.info("Reconciling CT %d with profile %s (installed: %s, available: %d)", container.ID, profile.Name, revisionLabel, profile.ProfileRevision)
+		a.info("Reconciling %s with profile %s (installed: %s, available: %d)", a.target(container.ID), profile.Name, revisionLabel, profile.ProfileRevision)
 		deployResult, installErr := a.install(container.ID, profile.Name)
 		if installErr != nil {
 			fmt.Fprintln(a.errOut, installErr)

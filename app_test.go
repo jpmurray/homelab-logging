@@ -22,8 +22,8 @@ func TestRepositoryConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(profiles) != 31 {
-		t.Fatalf("got %d profiles, want 31", len(profiles))
+	if len(profiles) != 32 {
+		t.Fatalf("got %d profiles, want 32", len(profiles))
 	}
 }
 
@@ -146,11 +146,59 @@ func TestVitoProfilePreservesWorkerFilename(t *testing.T) {
 	}
 }
 
+func TestHostProfileMigratesLegacyForwarding(t *testing.T) {
+	t.Setenv("HLL_TESTING", "1")
+	client := newFakeClient()
+	client.commands["rsyslogd"] = false
+	client.services["pveproxy.service"] = true
+	client.exists["/var/log/pve"] = true
+	client.exists["/var/log/pveproxy"] = true
+	client.exists["/var/log/pveproxy/access.log"] = true
+	client.exists["/var/log/pve/tasks/A/UPID:test"] = true
+	client.files["/etc/rsyslog.d/90-alloy.conf"] = []byte("legacy host forwarding\n")
+	application, out, _ := testApp(t, client, "patate-du-cluster")
+	application.host = true
+	application.site.OriginRole = "proxmox-host"
+
+	if _, err := application.install(hostTargetID, ""); err != nil {
+		t.Fatal(err)
+	}
+	generated := string(client.files[application.site.RemoteConfig])
+	for _, wanted := range []string{
+		"# homelab-logging-profile: pve-host",
+		`role=\"proxmox-host\"`,
+		`File="/var/log/pveproxy/access.log"`,
+		`File="/var/log/pve/tasks/*/UPID:*"`,
+		`Ruleset="alloy_tasks"`,
+	} {
+		if !strings.Contains(generated, wanted) {
+			t.Errorf("generated host configuration is missing %q", wanted)
+		}
+	}
+	if _, active := client.files["/etc/rsyslog.d/90-alloy.conf"]; active {
+		t.Fatal("legacy host forwarding remains active")
+	}
+	disabled := false
+	for path := range client.files {
+		disabled = disabled || strings.HasPrefix(path, "/etc/rsyslog.d/90-alloy.conf.disabled.")
+	}
+	if !disabled {
+		t.Fatal("legacy host forwarding was not preserved as disabled")
+	}
+	if !client.packages["rsyslog"] {
+		t.Fatal("host installation did not install rsyslog")
+	}
+	if !strings.Contains(out.String(), "Detected profile: pve-host") {
+		t.Fatalf("host profile detection was not reported:\n%s", out.String())
+	}
+}
+
 type fakeClient struct {
 	files          map[string][]byte
 	exists         map[string]bool
 	services       map[string]bool
 	packages       map[string]bool
+	commands       map[string]bool
 	dockerOutput   string
 	containers     []Container
 	failValidation bool
@@ -163,6 +211,7 @@ func newFakeClient() *fakeClient {
 		exists:     map[string]bool{},
 		services:   map[string]bool{},
 		packages:   map[string]bool{},
+		commands:   map[string]bool{"rsyslogd": true},
 		containers: []Container{{ID: 105, Status: "running", Name: "postgres"}},
 	}
 }
@@ -199,6 +248,16 @@ func (f *fakeClient) Exec(_ int, args ...string) (string, error) {
 	case "sh":
 		if strings.Contains(args[2], "docker inspect") {
 			return f.dockerOutput, nil
+		}
+		if strings.Contains(args[2], "command -v") {
+			command := args[len(args)-1]
+			if strings.Contains(args[2], "rsyslogd") {
+				command = "rsyslogd"
+			}
+			if f.commands[command] {
+				return "", nil
+			}
+			return "", fmt.Errorf("command missing: %s", command)
 		}
 		return "", nil
 	case "docker":
@@ -258,6 +317,9 @@ func (f *fakeClient) Exec(_ int, args ...string) (string, error) {
 		for _, arg := range args {
 			if arg == "rsyslog" || arg == "rsyslog-docker" {
 				f.packages[arg] = true
+			}
+			if arg == "rsyslog" {
+				f.commands["rsyslogd"] = true
 			}
 		}
 		return "", nil
