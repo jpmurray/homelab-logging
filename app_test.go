@@ -22,8 +22,8 @@ func TestRepositoryConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(profiles) != 32 {
-		t.Fatalf("got %d profiles, want 32", len(profiles))
+	if len(profiles) != 33 {
+		t.Fatalf("got %d profiles, want 33", len(profiles))
 	}
 }
 
@@ -486,6 +486,23 @@ func TestDetectionDeploymentIdempotencyAndRollback(t *testing.T) {
 	}
 	if string(client.files["/etc/rsyslog.d/90-alloy.conf"]) != "legacy replacement\n" {
 		t.Fatal("rollback did not reactivate legacy configuration")
+	}
+}
+
+func TestLinkwardenDetectionBeatsBundledPostgres(t *testing.T) {
+	client := newFakeClient()
+	client.services["linkwarden.service"] = true
+	client.services["postgresql.service"] = true
+	client.exists["/opt/linkwarden"] = true
+	client.exists["/var/log/postgresql"] = true
+	application, _, _ := testApp(t, client, "restorrent")
+
+	profile, err := application.detectProfile(108)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profile.Name != "linkwarden" {
+		t.Fatalf("detected %q, want linkwarden", profile.Name)
 	}
 }
 

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "profile_revision": 1,
+  "name": "linkwarden",
+  "description": "Linkwarden web and worker journal logging",
+  "journal": true,
+  "required_paths": ["/opt/linkwarden"],
+  "files": [],
+  "tasks": [],
+  "docker": {"enabled": false},
+  "detect": {
+    "mode": "any",
+    "priority": 90,
+    "probes": [
+      {"type": "service", "value": "linkwarden.service"},
+      {"type": "path", "value": "/opt/linkwarden"}
+    ]
+  },
+  "test_service": "linkwarden-test",
+  "notes": ["Collects the native systemd journal for Linkwarden's web and worker processes; application records currently use the yarn syslog identifier."]
+}
