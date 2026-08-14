@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-13
+
 ### Added
 
 - A Linkwarden profile for native systemd journal collection of its web and worker processes.
@@ -96,7 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bash installer, shell libraries, shell test harness, and the runtime dependency on `jq`.
 
-[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.4.1...HEAD
+[Unreleased]: https://github.com/jpmurray/homelab-logging/compare/1.5.0...HEAD
+[1.5.0]: https://github.com/jpmurray/homelab-logging/compare/1.4.1...1.5.0
 [1.4.1]: https://github.com/jpmurray/homelab-logging/compare/1.4.0...1.4.1
 [1.4.0]: https://github.com/jpmurray/homelab-logging/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/jpmurray/homelab-logging/compare/1.2.3...1.3.0
